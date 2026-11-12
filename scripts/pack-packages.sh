@@ -52,6 +52,8 @@ META = {
   "sqlite": ("3.45.3", "db", "dir", "/data/local/opt/sqlite", "/data/local/opt/sqlite/bin/sqlite3", "SQLite CLI"),
   "python3": ("3.12.13", "lang", "dir", "/data/local/opt/python3", "/data/local/opt/python3/bin/python3", "Python 3 (Alpine musl)"),
   "apkg": ("1.0.0", "system", "file", "", "/data/local/bin/apkg", "Пакетный менеджер Alice"),
+  # версию держи в синхроне с const version в cmd/stationctl/main.go
+  "stationctl": ("0.3.0", "system", "file", "", "/data/local/bin/stationctl", "Веб-пульт станции (локальный)"),
 }
 
 packages = []
