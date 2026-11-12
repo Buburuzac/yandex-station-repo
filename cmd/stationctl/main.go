@@ -242,8 +242,10 @@ type status struct {
 
 func deviceID() string {
 	if have("device_id") {
-		if out, _, err := run(3*time.Second, resolve("device_id")); err == nil {
-			if s := strings.TrimSpace(out); s != "" {
+		// на прошивке quasar: `device_id -r` читает id (без аргумента печатает usage)
+		if out, _, err := run(3*time.Second, resolve("device_id"), "-r"); err == nil {
+			s := strings.TrimSpace(out)
+			if s != "" && !strings.Contains(s, "Usage") {
 				return s
 			}
 		}
@@ -618,16 +620,28 @@ func tailLast(f *os.File, size int64, n int) (string, error) {
 
 // --- ADB (вкл/выкл через штатный activate_adb.sh) ---
 
-const (
-	markerQuasmodrom = "/data/quasar_activate_adb_quasmodrom"
-	markerSound      = "/data/quasar_activate_adb_sound"
-	markerGlagol     = "/data/quasar_activate_adb_glagol"
-	markerNetwork    = "/data/quasar_activate_network_adb"
-)
+// Расположение маркеров различается по прошивкам: часть кладёт их прямо в /data
+// как `quasar_activate_adb_*`, часть — внутрь /data/quasar/ как `activate_adb_*`.
+// Проверяем оба варианта.
+var adbMarkerPaths = map[string][]string{
+	"quasmodrom": {"/data/quasar_activate_adb_quasmodrom", "/data/quasar/activate_adb_quasmodrom"},
+	"sound":      {"/data/quasar_activate_adb_sound", "/data/quasar/activate_adb_sound"},
+	"glagol":     {"/data/quasar_activate_adb_glagol", "/data/quasar/activate_adb_glagol"},
+	"network":    {"/data/quasar_activate_network_adb", "/data/quasar/activate_network_adb"},
+}
 
 func fileExists(p string) bool {
 	fi, err := os.Stat(p)
 	return err == nil && !fi.IsDir()
+}
+
+func markerSet(kind string) bool {
+	for _, p := range adbMarkerPaths[kind] {
+		if fileExists(p) {
+			return true
+		}
+	}
+	return false
 }
 
 // quasarDir — каталог вендора с activate_adb.sh (${QUASAR}).
@@ -681,10 +695,10 @@ type adbState struct {
 func adbStatus() adbState {
 	_, ok := activateADBScript()
 	s := adbState{
-		Quasmodrom: fileExists(markerQuasmodrom),
-		Sound:      fileExists(markerSound),
-		Glagol:     fileExists(markerGlagol),
-		Network:    fileExists(markerNetwork),
+		Quasmodrom: markerSet("quasmodrom"),
+		Sound:      markerSet("sound"),
+		Glagol:     markerSet("glagol"),
+		Network:    markerSet("network"),
 		Listening:  adbListening(),
 		Script:     ok,
 	}
